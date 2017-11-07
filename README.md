@@ -1,5 +1,5 @@
 # etheal-sale
-Solidity contract for etheal token and sale rounds
+Solidity contract for [etheal](https://etheal.com) token and sale rounds
 
 ## Contract Structure 
 
@@ -42,6 +42,22 @@ It implements HasNoTokens to recover mistakenly sent tokens to this contract.
 All the tokens it holds can be used to create and revoke grants, transfer tokens to existing but not started grants.
 
 Tokens for future crowdsales are held at the address of 0x1, which can be only moved to a crowdsale contract. Crowdsale contracts send excess HEAL tokens back to address 0x1. If there is no active crowdsale (which has started but not ended), then it can set a new crowdsale contract and transfer tokens to it.
+
+We have decided to handle crowdsales in separate contract to the EthealController, because there will be several rounds of sales, and the exact timing of round 2 and 3 is unknown yet.
+
+![Token Distribution](https://etheal.com/img/illustrations/sales_chart.svg "Token Distribution")
+
+Token distribution:
+* SALE address (0x1): 43M HEAL tokens for future sales rounds
+* HODLER reward contract: 10M HEAL tokens
+* Deployer of contracts: 3.5M HEAL tokens for referral + bounty tokens
+  * excess tokens will be sent to the HODLER reward contract
+* Multisig Wallet: 20M HEAL tokens for Community Fund
+* EthealController: 20.5M HEAL tokens for team, founders, advisors
+  * it can be only withdrawn through grants
+    * team: 4 years vesting with one year cliff
+    * advisors: 6 months vesting with three months cliff
+* 2 investor addresses: 3M HEAL tokens
 
 Only the multisig wallet can burn tokens of the EthealController (which belongs to the team and advisors), or burn not yet assigned crowdsale tokens. In the future the controller may be used to burn some of its own profit.
 
@@ -100,7 +116,7 @@ It implements **whitelist** logic as follows:
 Almost identical to EthealPreSale, except is has no minimum goal thus no refund. Until reaching softcap it sells tokens for 1000 HEAL/ETH, and above the softcap is sells all the 20M HEAL tokens, and everyone get HEAL tokens in proportion of their stakes to the total stakes.
 
 There is a bonus structure, when contributing on the first day people get +40% stakes, on the second day +20% stakes, on the rest of the first week +15% stakes, on the second week +10% stakes and on the third week +5% stakes.
-
+![Normal Sale bonus](https://etheal.com/img/illustrations/tokenbonus.svg "Normal Sale bonus")
 
 ## Deployment
 
