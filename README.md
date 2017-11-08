@@ -3,13 +3,21 @@ Solidity contract for [etheal](https://etheal.com) token and sale rounds
 
 ## Contract Structure 
 
-### Basics
+### Unique contracts
+1. EthealController: controlling the Etheal MiniMeToken
+2. Hodler: managing the hodler reward fund
+3. EthealPreSale: managing presale
+4. EthealNormalSale: managing normal sale
+
+Please see detailed description at the bottom.
+
+### Basic contracts
 * SafeMath: basic OpenZeppelin SafeMath for safe math functions
 * Wallet: basic consensys multisig wallet
 * Ownable: basic OpenZeppelin Ownable contract
 * Pausable: basic OpenZeppelin Pausable contract
 
-### MiniMe
+### MiniMe contracts
 * ERC20: basic ERC20 interface
 * ERC20MiniMe: is an ERC20 interface for MiniMe token
 * Controlled: basic Controlled contract needed for MiniMe
@@ -17,7 +25,7 @@ Solidity contract for [etheal](https://etheal.com) token and sale rounds
 * TokenController: token controller interface needed to controll the Etheal MiniMe token
 * EthealToken: is a very basic MiniMe token instanciation
 
-### Crowdsale basics
+### Crowdsale basic contracts
 * HasNoTokens: basic token to implement extraction of mistakenly sent tokens
 * Crowdsale: basic OpenZeppelin Crowdsale with 3 small modifications
   * ERC20 token replaced with ERC20MiniMe token
