@@ -57,6 +57,8 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
     // events for token purchase during sale and claiming tokens after sale
     event TokenClaimed(address indexed _claimer, address indexed _beneficiary, uint256 _stake, uint256 _amount);
     event TokenPurchase(address indexed _purchaser, address indexed _beneficiary, uint256 _value, uint256 _stake, uint256 _amount, uint256 _participants, uint256 _weiRaised);
+    event TokenGoalReached();
+    event TokenSoftCapReached(uint256 _closeTime);
 
     // whitelist events for adding days with maximum stakes and addresses
     event WhitelistAddressAdded(address indexed _whitelister, address indexed _beneficiary);
@@ -112,13 +114,47 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
         // caps have to be consistent with each other
         require(_goal <= _softCap && _softCap <= _cap);
 
+        
         softCap = _softCap;
         softCapTime = _softCapTime;
+
+        // this is needed since super constructor wont overwite overriden variables
+        cap = _cap;
+        goal = _goal;
+        rate = _rate;
 
         maxGasPrice = _gasPrice;
         maxGasPricePenalty = _gasPenalty;
 
         minContribution = _minContribution;
+    }
+
+    /// @dev Overriding Crowdsale#buyTokens to add partial refund and softcap logic 
+    /// @param _beneficiary Beneficiary of the token purchase
+    function buyTokens(address _beneficiary) public payable whenNotPaused {
+        require(_beneficiary != address(0));
+
+        uint256 weiToCap = howMuchCanXContributeNow(_beneficiary);
+        uint256 weiAmount = uint256Min(weiToCap, msg.value);
+
+        // goal is reached
+        if (weiRaised < goal && weiRaised.add(weiAmount) >= goal)
+            TokenGoalReached();
+
+        // call the Crowdsale#buyTokens internal function
+        buyTokens(_beneficiary, weiAmount);
+
+        // close sale in softCapTime seconds after reaching softCap
+        if (weiRaised >= softCap && softCapClose == 0) {
+            softCapClose = now.add(softCapTime);
+            TokenSoftCapReached(uint256Min(softCapClose, endTime));
+        }
+
+        // handle refund
+        uint256 refund = msg.value.sub(weiAmount);
+        if (refund > 0) {
+            msg.sender.transfer(refund);
+        }
     }
 
     /// @dev Overriding Crowdsale#transferToken, which keeps track of contributions DURING token sale
@@ -143,27 +179,6 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
         stakes[_beneficiary] = stakes[_beneficiary].add(weiAmount);
 
         TokenPurchase(msg.sender, _beneficiary, _weiAmount, weiAmount, tokens, contributorsKeys.length, weiRaised);
-    }
-
-    /// @dev Overriding Crowdsale#buyTokens to add partial refund and softcap logic 
-    /// @param _beneficiary Beneficiary of the token purchase
-    function buyTokens(address _beneficiary) public payable whenNotPaused {
-        require(_beneficiary != address(0));
-
-        uint256 weiToCap = howMuchCanXContributeNow(_beneficiary);
-        uint256 weiAmount = weiToCap < msg.value ? weiToCap : msg.value;
-
-        buyTokens(_beneficiary, weiAmount);
-
-        // close sale in softCapTime seconds after reaching softCap
-        if (weiRaised >= softCap && softCapClose == 0)
-            softCapClose = now.add(softCapTime);
-
-        // handle refund
-        uint256 refund = msg.value.sub(weiAmount);
-        if (refund > 0) {
-            msg.sender.transfer(refund);
-        }
     }
 
     /// @dev Overriding Crowdsale#validPurchase to add min contribution logic
@@ -195,8 +210,9 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
             tokenSold = tokenBalance; 
 
             // send back the excess token to ethealController
-            if (_balance > tokenBalance)
+            if (_balance > tokenBalance) {
                 ethealController.ethealToken().transfer(ethealController.SALE(), _balance.sub(tokenBalance));
+            }
         } else if (!goalReached() && _balance > 0) {
             // if token sale is failed, then send back all tokens to ethealController's sale address
             tokenBalance = 0;
