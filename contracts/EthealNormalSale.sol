@@ -55,6 +55,7 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     // events for token purchase during sale and claiming tokens after sale
     event TokenClaimed(address indexed _claimer, address indexed _beneficiary, uint256 _stake, uint256 _amount);
     event TokenPurchase(address indexed _purchaser, address indexed _beneficiary, uint256 _value, uint256 _stake, uint256 _participants, uint256 _weiRaised);
+    event TokenSoftCapReached(uint256 _closeTime);
 
     // whitelist events for adding days with maximum stakes and addresses
     event WhitelistAddressAdded(address indexed _whitelister, address indexed _beneficiary);
@@ -106,6 +107,10 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
         softCap = _softCap;
         softCapTime = _softCapTime;
 
+        // this is needed since super constructor wont overwite overriden variables
+        cap = _cap;
+        rate = _rate;
+
         maxGasPrice = _gasPrice;
         maxGasPricePenalty = _gasPenalty;
 
@@ -146,8 +151,10 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
         buyTokens(_beneficiary, weiAmount);
 
         // close sale in softCapTime seconds after reaching softCap
-        if (weiRaised >= softCap && softCapClose == 0)
+        if (weiRaised >= softCap && softCapClose == 0) {
             softCapClose = now.add(softCapTime);
+            TokenSoftCapReached(uint256Min(softCapClose, endTime));
+        }
 
         // handle refund
         uint256 refund = msg.value.sub(weiAmount);
