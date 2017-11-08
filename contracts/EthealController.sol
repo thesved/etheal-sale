@@ -189,6 +189,13 @@ contract EthealController is Pausable, HasNoTokens, TokenController {
         if (_stake > 0)
             ethealToken.transfer(_controller, _stake);
     }
+    
+    /// @notice Set new multisig wallet, to make it upgradable.
+    function setNewMultisig(address _wallet) public onlyEthealMultisig {
+        require(_wallet != address(0));
+
+        ethealMultisigWallet = _wallet;
+    }
 
 
     ////////////////
