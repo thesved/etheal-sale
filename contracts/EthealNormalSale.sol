@@ -178,9 +178,8 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
 
     /// @dev Extending RefundableCrowdsale#finalization sending back excess tokens to ethealController
     function finalization() internal {
-        uint256 _balance = ethealController.ethealToken().balanceOf(address(this));
+        tokenSold = getHealBalance();
 
-        tokenSold = getHealBalance(); 
         // if didn't reach the soft cap we refund excess tokens
         if (weiRaised < softCap) {
             uint256 _sold = totalStakes.mul(rate);
@@ -193,6 +192,7 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
                 ethealController.ethealToken().transfer(ethealController.SALE(), _excess);
             }
         }
+
         // unclaimed tokens
         tokenBalance = tokenSold;
 
@@ -381,11 +381,11 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
             _multiply = _multiply.mul(140).div(100);
         } else if (_day == 2) {
             _multiply = _multiply.mul(120).div(100);
-        } else if (3 <=_day && _day <= 7) {
+        } else if (3 <= _day && _day <= 7) {
             _multiply = _multiply.mul(115).div(100);
-        } else if (8 <=_day && _day <= 14) {
+        } else if (8 <= _day && _day <= 14) {
             _multiply = _multiply.mul(110).div(100);
-        } else if (15 <=_day && _day <= 21) {
+        } else if (15 <= _day && _day <= 21) {
             _multiply = _multiply.mul(105).div(100);
         }
     }
