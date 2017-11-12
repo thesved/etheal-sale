@@ -6,6 +6,7 @@ import "./RefundableCrowdsale.sol";
 import "./TokenController.sol";
 import "./Pausable.sol";
 
+
 /**
  * @title EthealPreSale
  * @author thesved
@@ -202,7 +203,7 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
 
     /// @dev Extending RefundableCrowdsale#finalization sending back excess tokens to ethealController
     function finalization() internal {
-        uint256 _balance = ethealController.ethealToken().balanceOf(address(this));
+        uint256 _balance = getHealBalance();
 
         // if token sale was successful send back excess funds
         if (goalReached()) {
