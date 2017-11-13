@@ -1,6 +1,6 @@
 pragma solidity ^0.4.17;
 
-import './SafeMath.sol';
+import "./SafeMath.sol";
 import "./ERC20MiniMe.sol";
 import "./Crowdsale.sol";
 import "./TokenController.sol";
@@ -8,6 +8,7 @@ import "./Pausable.sol";
 import "./Hodler.sol";
 import "./TokenVesting.sol";
 import "./HasNoTokens.sol";
+
 
 /**
  * @title EthealController
@@ -125,23 +126,23 @@ contract EthealController is Pausable, HasNoTokens, TokenController {
     ////////////////
 
     /// @notice Grant vesting token to an address
-    function createGrant(address _beneficiary, uint256 _amount, bool _revocable, bool _advisor) public onlyOwner {
-        require(_beneficiary != address(0) && _amount > 0);
+    function createGrant(address _beneficiary, uint256 _start, uint256 _amount, bool _revocable, bool _advisor) public onlyOwner {
+        require(_beneficiary != address(0) && _amount > 0 && _start >= now);
 
         // create token grant
         if (_advisor) {
-            tokenGrants.push(new TokenVesting(_beneficiary, now, VESTING_ADVISOR_CLIFF, VESTING_ADVISOR_DURATION, _revocable));
+            tokenGrants.push(new TokenVesting(_beneficiary, _start, VESTING_ADVISOR_CLIFF, VESTING_ADVISOR_DURATION, _revocable));
         } else {
-            tokenGrants.push(new TokenVesting(_beneficiary, now, VESTING_TEAM_CLIFF, VESTING_TEAM_DURATION, _revocable));
+            tokenGrants.push(new TokenVesting(_beneficiary, _start, VESTING_TEAM_CLIFF, VESTING_TEAM_DURATION, _revocable));
         }
 
         // transfer funds to the grant
-        require(ethealToken.transfer(address(tokenGrants[tokenGrants.length.sub(1)]), _amount));
+        transferToGrant(tokenGrants.length.sub(1), _amount);
     }
 
     /// @notice Transfer tokens to a grant until it is starting
     function transferToGrant(uint256 _id, uint256 _amount) public onlyOwner {
-        require(_id < tokenGrants.length && _amount > 0 && now < tokenGrants[_id].start());
+        require(_id < tokenGrants.length && _amount > 0 && now <= tokenGrants[_id].start());
 
         // transfer funds to the grant
         require(ethealToken.transfer(address(tokenGrants[_id]), _amount));
@@ -189,7 +190,7 @@ contract EthealController is Pausable, HasNoTokens, TokenController {
         if (_stake > 0)
             ethealToken.transfer(_controller, _stake);
     }
-    
+
     /// @notice Set new multisig wallet, to make it upgradable.
     function setNewMultisig(address _wallet) public onlyEthealMultisig {
         require(_wallet != address(0));
@@ -212,8 +213,7 @@ contract EthealController is Pausable, HasNoTokens, TokenController {
         if (_hodler != address(0)) {
             // set hodler reward contract if provided
             hodlerReward = Hodler(_hodler);
-        }
-        else if (hodlerReward == address(0)) {
+        } else if (hodlerReward == address(0)) {
             // create hodler reward contract if not yet created
             hodlerReward = new Hodler(TOKEN_HODL_3M, TOKEN_HODL_6M, TOKEN_HODL_9M);
         }

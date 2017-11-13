@@ -294,6 +294,7 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
 
     /// @notice Sets minimum goal, soft cap and max cap
     function setCaps(uint256 _goal, uint256 _softCap, uint256 _softCapTime, uint256 _cap) public onlyOwner beforeSale {
+        require(0 < _goal && _goal <= _softCap && _softCap <= _cap);
         goal = _goal;
         softCap = _softCap;
         softCapTime = _softCapTime;
@@ -302,12 +303,14 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
 
     /// @notice Sets crowdsale start and end time
     function setTimes(uint256 _startTime, uint256 _endTime) public onlyOwner beforeSale {
+        require(_startTime > now && _startTime < _endTime);
         startTime = _startTime;
         endTime = _endTime;
     }
 
     /// @notice Set rate
     function setRate(uint256 _rate) public onlyOwner beforeSale {
+        require(_rate > 0);
         rate = _rate;
     }
 

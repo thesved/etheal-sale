@@ -273,6 +273,7 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
 
     /// @notice Sets soft and max cap
     function setCaps(uint256 _softCap, uint256 _softCapTime, uint256 _cap) public onlyOwner beforeSale {
+        require(0 < _cap && _softCap <= _cap);
         softCap = _softCap;
         softCapTime = _softCapTime;
         cap = _cap;
@@ -280,12 +281,14 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
 
     /// @notice Sets crowdsale start and end time
     function setTimes(uint256 _startTime, uint256 _endTime) public onlyOwner beforeSale {
+        require(_startTime > now && _startTime < _endTime);
         startTime = _startTime;
         endTime = _endTime;
     }
 
     /// @notice Set rate
     function setRate(uint256 _rate) public onlyOwner beforeSale {
+        require(_rate > 0);
         rate = _rate;
     }
 
