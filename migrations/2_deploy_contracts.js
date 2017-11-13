@@ -9,7 +9,7 @@ var RefundVault = artifacts.require("RefundVault");
 var Hodler = artifacts.require("Hodler");
 var TokenVesting = artifacts.require("TokenVesting");
 
-var dateStart = Math.floor(new Date().getTime()/1000)+5*60; // starts in 5 minutes
+var dateStart = Math.floor(new Date().getTime()/1000)+5*60*60*24; // starts in 5 days
 var dateEnd = dateStart + 10*24*60*60; // lasts 10 days
 
 module.exports = function(deployer) {
@@ -37,6 +37,9 @@ module.exports = function(deployer) {
 	}).then(function(){
 		// then PreSale
 		return deployer.deploy(PreSale,EthealController.address,dateStart,dateEnd,web3.toWei(0.1, "ether"),1000,web3.toWei(10, "ether"),web3.toWei(50, "ether"),120*60*60,web3.toWei(100, "ether"),web3.toWei(100, "gwei"),80,Wallet.address);
+	}).then(function(){
+		// then NormalSale
+		return deployer.deploy(NormalSale,EthealController.address,dateStart,dateEnd,web3.toWei(0.1, "ether"),1000,web3.toWei(50, "ether"),120*60*60,web3.toWei(100, "ether"),web3.toWei(100, "gwei"),80,Wallet.address);
 	}).then(function(){
 		// set crowdsale
 		return (EthealController.at(EthealController.address)).setCrowdsaleTransfer(PreSale.address,web3.toBigNumber(web3.toWei(100,"ether")).mul(1000));
