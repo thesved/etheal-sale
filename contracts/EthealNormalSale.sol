@@ -344,8 +344,9 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     /// @dev Anyone can call this function and distribute tokens after successful token sale
     /// @param _beneficiaries Array of addresses for which we want to claim tokens
     function claimTokensFor(address[] _beneficiaries) external afterSaleSuccess {
-        for (uint256 i = 0; i < _beneficiaries.length; i++)
+        for (uint256 i = 0; i < _beneficiaries.length; i++) {
             claimTokenFor(_beneficiaries[i]);
+        }
     }
 
 
