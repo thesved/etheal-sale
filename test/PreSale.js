@@ -442,6 +442,11 @@ contract('PreSale', function ([deployer, investor, wallet, purchaser, purchaser2
       postW.minus(preW).should.be.bignumber.equal(new BigNumber(1))
     })
 
+    it('should fail to extract ether from vault if failed to reach goal', async function () {
+      await increaseTimeTo(this.afterEndTime)
+      await this.crowdsale.extractVaultTokens(0, wallet).should.be.rejectedWith(EVMThrow)
+    })
+
   })
 
 
