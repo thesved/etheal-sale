@@ -168,13 +168,13 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     /// @dev Overriding Crowdsale#validPurchase to add min contribution logic
     /// @param _weiAmount Contribution amount in wei
     /// @return true if contribution is okay
-    function validPurchase(uint256 _weiAmount) internal constant returns (bool) {
+    function validPurchase(uint256 _weiAmount) internal view returns (bool) {
         return super.validPurchase(_weiAmount) && _weiAmount >= minContribution;
     }
 
     /// @dev Overriding Crowdsale#hasEnded to add soft cap logic
     /// @return true if crowdsale event has ended or a softCapClose time is set and passed
-    function hasEnded() public constant returns (bool) {
+    function hasEnded() public view returns (bool) {
         return super.hasEnded() || softCapClose > 0 && now > softCapClose;
     }
 
@@ -357,12 +357,12 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     ////////////////
 
     /// @notice Returns stake multiplyer for now
-    function getStakeMultiplyerNow() view public returns (uint256) {
+    function getStakeMultiplyerNow() public view returns (uint256) {
         return getStakeMultiplyer(now);
     }
 
     /// @notice Returns the stake multiplyer in percentage, eg 80 means 80%
-    function getStakeMultiplyer(uint256 _time) view public returns (uint256 _multiply) {
+    function getStakeMultiplyer(uint256 _time) public view returns (uint256 _multiply) {
         _multiply = 100;
 
         // gas price penalty

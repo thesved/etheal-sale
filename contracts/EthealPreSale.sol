@@ -186,13 +186,13 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
     /// @dev Overriding Crowdsale#validPurchase to add min contribution logic
     /// @param _weiAmount Contribution amount in wei
     /// @return true if contribution is okay
-    function validPurchase(uint256 _weiAmount) internal constant returns (bool) {
+    function validPurchase(uint256 _weiAmount) internal view returns (bool) {
         return super.validPurchase(_weiAmount) && _weiAmount >= minContribution;
     }
 
     /// @dev Overriding Crowdsale#hasEnded to add soft cap logic
     /// @return true if crowdsale event has ended or a softCapClose time is set and passed
-    function hasEnded() public constant returns (bool) {
+    function hasEnded() public view returns (bool) {
         return super.hasEnded() || softCapClose > 0 && now > softCapClose;
     }
 

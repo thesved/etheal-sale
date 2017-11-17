@@ -94,19 +94,19 @@ contract Crowdsale {
   }
 
   // @return true if the transaction can buy tokens
-  function validPurchase(uint256 weiAmount) internal constant returns (bool) {
+  function validPurchase(uint256 weiAmount) internal view returns (bool) {
     bool withinPeriod = now >= startTime && now <= endTime;
     bool nonZeroPurchase = weiAmount != 0;
     return withinPeriod && nonZeroPurchase;
   }
 
   // @return true if crowdsale event has ended
-  function hasEnded() public constant returns (bool) {
+  function hasEnded() public view returns (bool) {
     return now > endTime;
   }
 
   // @return true if crowdsale has started
-  function hasStarted() public constant returns (bool) {
+  function hasStarted() public view returns (bool) {
     return now >= startTime;
   }
 }
