@@ -126,14 +126,16 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
         uint256 _stake = _weiAmount;
         // adjust with stake multiplyer
         uint256 _mul = getStakeMultiplyerNow();
-        if (_mul != 100)
+        if (_mul != 100) {
             _stake = _stake.mul(_mul).div(100);
+        }
 
         // saving total stakes to be able to distribute tokens at the end
         totalStakes = totalStakes.add(_stake);
 
-        if (stakes[_beneficiary] == 0)
+        if (stakes[_beneficiary] == 0) {
             contributorsKeys.push(_beneficiary);
+        }
 
         stakes[_beneficiary] = stakes[_beneficiary].add(_stake);
 
@@ -408,8 +410,9 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     function howMuchCanXContributeNow(address _beneficiary) view public returns (uint256) {
         require(_beneficiary != address(0));
 
-        if (!hasStarted() || hasEnded()) 
+        if (!hasStarted() || hasEnded()) {
             return 0;
+        }
 
         // wei to hard cap
         uint256 weiToCap = cap.sub(weiRaised);
@@ -418,16 +421,18 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
         uint8 _saleDay = getSaleDayNow();
         if (_saleDay <= whitelistDayCount) {
             // address can't contribute if it is not whitelisted
-            if (!whitelist[_beneficiary])
+            if (!whitelist[_beneficiary]) {
                 return 0;
+            }
 
             // personal cap is the daily whitelist limit minus the stakes the address already has
             uint256 weiToPersonalCap = whitelistDayMaxStake[_saleDay].sub(stakes[_beneficiary]);
 
             // calculate for maxGasPrice penalty and sale bonus
             uint256 _mul = getStakeMultiplyerNow();
-            if (_mul != 100)
+            if (_mul != 100) {
                 weiToPersonalCap = weiToPersonalCap.mul(100).div(_mul);
+            }
 
             weiToCap = uint256Min(weiToCap, weiToPersonalCap);
         }

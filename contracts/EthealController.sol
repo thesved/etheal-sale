@@ -182,13 +182,15 @@ contract EthealController is Pausable, HasNoTokens, TokenController {
 
         // send eth
         uint256 _stake = this.balance;
-        if (_stake > 0)
+        if (_stake > 0) {
             _controller.transfer(_stake);
+        }
 
         // send tokens
         _stake = ethealToken.balanceOf(this);
-        if (_stake > 0)
+        if (_stake > 0) {
             ethealToken.transfer(_controller, _stake);
+        }
     }
 
     /// @notice Set new multisig wallet, to make it upgradable.
