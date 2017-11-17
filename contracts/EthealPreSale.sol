@@ -399,7 +399,9 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
 
     /// @notice Get back accidentally sent token from the vault
     function extractVaultTokens(address _token, address _claimer) public onlyOwner afterSale {
+        // it has to have a valid claimer, and either the goal has to be reached or the token can be 0 which means we can't extract ether if the goal is not reached
         require(_claimer != address(0));
+        require(goalReached() || _token != address(0));
 
         vault.extractTokens(_token, _claimer);
     }
