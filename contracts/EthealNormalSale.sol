@@ -508,4 +508,9 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     function getHealBalance() view public returns (uint256) {
         return ethealController.ethealToken().balanceOf(address(this));
     }
+
+    /// @notice Get current date for web3
+    function getNow() view public returns (uint256) {
+        return now;
+    }
 }

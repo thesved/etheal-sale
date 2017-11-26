@@ -539,4 +539,9 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
     function getHealBalance() view public returns (uint256) {
         return ethealController.ethealToken().balanceOf(address(this));
     }
+    
+    /// @notice Get current date for web3
+    function getNow() view public returns (uint256) {
+        return now;
+    }
 }
