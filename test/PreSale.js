@@ -686,7 +686,7 @@ contract('PreSale', function ([deployer, investor, wallet, purchaser, purchaser2
       await this.crowdsale.claimToken({from: investor, gasPrice: 0}).should.be.fulfilled
 
       hodl = await this.hodler.hodlerStakes(investor)
-      hodl[0].should.be.bignumber.equal(goal.mul(rate))
+      hodl[0].should.be.bignumber.equal(goal.mul(rate).mul(2))
     })
 
     it('should set hodl stake based on multiple contributions', async function () {
@@ -701,7 +701,7 @@ contract('PreSale', function ([deployer, investor, wallet, purchaser, purchaser2
       await this.crowdsale.claimToken({from: investor, gasPrice: 0}).should.be.fulfilled
 
       hodl = await this.hodler.hodlerStakes(investor)
-      hodl[0].should.be.bignumber.equal(goal.mul(rate))
+      hodl[0].should.be.bignumber.equal(goal.mul(rate).mul(2))
     })
 
     it('should set hodl stake and apply max gas penalty', async function () {
@@ -715,7 +715,7 @@ contract('PreSale', function ([deployer, investor, wallet, purchaser, purchaser2
       await this.crowdsale.claimToken({from: investor, gasPrice: 0}).should.be.fulfilled
 
       hodl = await this.hodler.hodlerStakes(investor)
-      hodl[0].should.be.bignumber.equal(goal.mul(rate).mul(maxGasFix))
+      hodl[0].should.be.bignumber.equal(goal.mul(rate).mul(2).mul(maxGasFix))
     })
 
     it('should invalidate hodl stake after transfer', async function () {
@@ -730,12 +730,12 @@ contract('PreSale', function ([deployer, investor, wallet, purchaser, purchaser2
       await this.crowdsale.claimToken({from: investor, gasPrice: 0}).should.be.fulfilled
 
       hodl = await this.hodler.hodlerStakes(investor)
-      hodl[0].should.be.bignumber.equal(goal.mul(rate))
+      hodl[0].should.be.bignumber.equal(goal.mul(rate).mul(2))
       hodl[1].should.equal(false)
 
       await this.token.transfer(purchaser,1,{from: investor, gasPrice:0}).should.be.fulfilled
       hodl = await this.hodler.hodlerStakes(investor)
-      hodl[0].should.be.bignumber.equal(goal.mul(rate))
+      hodl[0].should.be.bignumber.equal(goal.mul(rate).mul(2))
       hodl[1].should.equal(true)
     })
 
@@ -754,12 +754,12 @@ contract('PreSale', function ([deployer, investor, wallet, purchaser, purchaser2
 
       // investor should be invalidated
       let hodl = await this.hodler.hodlerStakes(investor)
-      hodl[0].should.be.bignumber.equal(goal.div(2).mul(rate))
+      hodl[0].should.be.bignumber.equal(goal.div(2).mul(rate).mul(2))
       hodl[1].should.equal(true)
 
       // purchaser should not be invalidated
       hodl = await this.hodler.hodlerStakes(purchaser)
-      hodl[0].should.be.bignumber.equal(goal.div(2).mul(rate))
+      hodl[0].should.be.bignumber.equal(goal.div(2).mul(rate).mul(2))
       hodl[1].should.equal(false)
     })
 
