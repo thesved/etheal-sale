@@ -381,7 +381,7 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
         tokenBalance = tokenBalance.sub(tokens);
 
         // distribute hodlr stake
-        ethealController.addHodlerStake(_beneficiary, tokens);
+        ethealController.addHodlerStake(_beneficiary, tokens.mul(2));
 
         // distribute token
         require(ethealController.ethealToken().transfer(_beneficiary, tokens));
@@ -539,6 +539,7 @@ contract EthealPreSale is Pausable, CappedCrowdsale, RefundableCrowdsale {
     function getHealBalance() view public returns (uint256) {
         return ethealController.ethealToken().balanceOf(address(this));
     }
+    
     
     /// @notice Get current date for web3
     function getNow() view public returns (uint256) {
