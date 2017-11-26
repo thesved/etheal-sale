@@ -68,11 +68,10 @@ contract Crowdsale {
     require(beneficiary != 0x0);
     require(validPurchase(weiAmount));
 
-    transferToken(beneficiary, weiAmount);
-
     // update state
     weiRaised = weiRaised.add(weiAmount);
 
+    transferToken(beneficiary, weiAmount);
     forwardFunds(weiAmount);
   }
 
