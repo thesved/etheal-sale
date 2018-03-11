@@ -8,11 +8,15 @@ Solidity contract for [etheal](https://etheal.com) token and sale rounds
 2. Hodler: managing the hodler reward fund
 3. EthealPreSale: managing presale
 4. EthealNormalSale: managing normal sale
+5. EthealDeposit: handling deposit before being whitelisted, and saving date for sending data
+6. EthealWhitelist: handling KYC
+7. EthealPromoTokenController: promo token, which gives additional bonus during sale
 
 Please see detailed description at the bottom.
 
 ### Basic contracts
 * SafeMath: basic OpenZeppelin SafeMath for safe math functions
+* ECRecovery: basic OpenZeppelin ECRecovery contract for signature checking
 * Wallet: basic consensys multisig wallet
 * Ownable: basic OpenZeppelin Ownable contract
 * Pausable: basic OpenZeppelin Pausable contract
@@ -53,7 +57,7 @@ Tokens for future crowdsales are held at the address of 0x1, which can be only m
 
 We have decided to handle crowdsales in separate contract to the EthealController, because there will be several rounds of sales, and the exact timing of round 2 and 3 is unknown yet.
 
-![Token Distribution](https://etheal.com/img/illustrations/sales_chart.svg "Token Distribution")
+![Token Distribution](https://etheal.com/img/chart-heal-token.svg "Token Distribution")
 
 Token distribution:
 * SALE address (0x1): 43M HEAL tokens for future sales rounds
@@ -80,11 +84,11 @@ It implements proxy functions to EthealToken (MiniMe), which stops transfering H
 Only crowdsale contracts can interract with it, and it accepts modifications until its start time.
 
 Implements hodler reward logic:
-Keep tokens intact (can’t move any portion of it) on your wallet for 3/6/9 months after two weeks of ending the normal sale, and 10M HEAL token HODLER reward will be distributed among presale and sale HODLERs in the ratio of their intact stakes to the total amount.
+Keep tokens intact (can’t move any portion of it) on your wallet for 3/6/9 months after two weeks of ending the normal sale, and 20M HEAL token HODLER reward will be distributed among presale and sale HODLERs in the ratio of their intact stakes to the total amount.
 
 * HODLER lot 3 months: 1,000,000 HEAL
 * HODLER lot 6 months: 2,000,000 HEAL
-* HODLER lot 9 months: 7,000,000 HEAL
+* HODLER lot 9 months: 17,000,000 HEAL
 
 Moving any portion of HEAL tokens from an address invalidates its stakes within the hodler reward.
 
@@ -121,10 +125,20 @@ It implements **whitelist** logic as follows:
 
 
 ### EthealNormalSale
-Almost identical to EthealPreSale, except is has no minimum goal thus no refund. Until reaching softcap it sells tokens for 1000 HEAL/ETH, and above the softcap is sells all the 20M HEAL tokens, and everyone get HEAL tokens in proportion of their stakes to the total stakes.
+$10M hard cap sale, with 700 HEAL / ETH base price, $4.8M soft cap. Can deposit earlier than start, but above a certain limit whitelisting is needed, either writing address to the EthealWhitelist contract, or offchain signing the address of the contributor.
 
-There is a bonus structure, when contributing on the first day people get +40% stakes, on the second day +20% stakes, on the rest of the first week +15% stakes, on the second week +10% stakes and on the third week +5% stakes.
-![Normal Sale bonus](https://etheal.com/img/illustrations/tokenbonus.svg "Normal Sale bonus")
+Time-based bonus structure:
+![Normal Sale bonus](https://etheal.com/img/chart-token-sale-bonus.svg "Normal Sale bonus")
+
+Volume-based bonus:
+* >= 100eth: +4%
+* >= 10eth: +2%
+
+Sending some promo token to one of the following addresses, results in +5% token bonus:
+* 0x0000000000000000000000000000000000000001
+* EthealPromoTokenController
+* EthealNormalSale
+
 
 ## Deployment
 
@@ -135,8 +149,19 @@ There is a bonus structure, when contributing on the first day people get +40% s
 4) deploy EthealToken with EthealController address and MiniMeTokenFactory address
 5) EthealController -> setEthealToken(EthealToken.address, 0)
   * 0 is for the Hodler reward contract address, it means the controller will create and assign to itself a new hodler contract
-6) deploy PreSale -> EthealController.address
-7) EthealController -> setCrowdsaleTransfer PreSale.address
+6) deploy EthealPromoTokenController
+7) deploy EthealPromoToken with EthealPromoTokenController and MiniMeTokenFactory addresses
+8) deploy EthealWhitelist with signer address
+9) deploy EthealNormalSale
+10) EthealController -> setCrowdsaleTransfer PreSale.address
+11) EthealNormalSale
+  * setPromoTokenController -> EthealPromoTokenController address
+  * setWhitelist -> EthealWhitelist address and minimum threshold above which whitelisting is needed
+12) EthealPromoTokenController
+  * setCrowdsale -> EthealNormalSale address
+  * setPromoToken -> EthealPromoToken address
+13) deploy EthealDeposit
+14) EthealNormalSale setDeposit -> EthealDeposit address
 
 ### Deploying a new crowdsale
 *only when no active crowdsale is present*
