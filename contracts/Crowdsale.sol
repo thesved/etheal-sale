@@ -68,10 +68,11 @@ contract Crowdsale {
     require(beneficiary != 0x0);
     require(validPurchase(weiAmount));
 
+    transferToken(beneficiary, weiAmount);
+
     // update state
     weiRaised = weiRaised.add(weiAmount);
 
-    transferToken(beneficiary, weiAmount);
     forwardFunds(weiAmount);
   }
 
@@ -93,19 +94,19 @@ contract Crowdsale {
   }
 
   // @return true if the transaction can buy tokens
-  function validPurchase(uint256 weiAmount) internal view returns (bool) {
+  function validPurchase(uint256 weiAmount) internal constant returns (bool) {
     bool withinPeriod = now >= startTime && now <= endTime;
     bool nonZeroPurchase = weiAmount != 0;
     return withinPeriod && nonZeroPurchase;
   }
 
   // @return true if crowdsale event has ended
-  function hasEnded() public view returns (bool) {
+  function hasEnded() public constant returns (bool) {
     return now > endTime;
   }
 
   // @return true if crowdsale has started
-  function hasStarted() public view returns (bool) {
+  function hasStarted() public constant returns (bool) {
     return now >= startTime;
   }
 }

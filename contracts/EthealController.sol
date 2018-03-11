@@ -126,23 +126,23 @@ contract EthealController is Pausable, HasNoTokens, TokenController {
     ////////////////
 
     /// @notice Grant vesting token to an address
-    function createGrant(address _beneficiary, uint256 _start, uint256 _amount, bool _revocable, bool _advisor) public onlyOwner {
-        require(_beneficiary != address(0) && _amount > 0 && _start >= now);
+    function createGrant(address _beneficiary, uint256 _amount, bool _revocable, bool _advisor) public onlyOwner {
+        require(_beneficiary != address(0) && _amount > 0);
 
         // create token grant
         if (_advisor) {
-            tokenGrants.push(new TokenVesting(_beneficiary, _start, VESTING_ADVISOR_CLIFF, VESTING_ADVISOR_DURATION, _revocable));
+            tokenGrants.push(new TokenVesting(_beneficiary, now, VESTING_ADVISOR_CLIFF, VESTING_ADVISOR_DURATION, _revocable));
         } else {
-            tokenGrants.push(new TokenVesting(_beneficiary, _start, VESTING_TEAM_CLIFF, VESTING_TEAM_DURATION, _revocable));
+            tokenGrants.push(new TokenVesting(_beneficiary, now, VESTING_TEAM_CLIFF, VESTING_TEAM_DURATION, _revocable));
         }
 
         // transfer funds to the grant
-        transferToGrant(tokenGrants.length.sub(1), _amount);
+        require(ethealToken.transfer(address(tokenGrants[tokenGrants.length.sub(1)]), _amount));
     }
 
     /// @notice Transfer tokens to a grant until it is starting
     function transferToGrant(uint256 _id, uint256 _amount) public onlyOwner {
-        require(_id < tokenGrants.length && _amount > 0 && now <= tokenGrants[_id].start());
+        require(_id < tokenGrants.length && _amount > 0 && now < tokenGrants[_id].start());
 
         // transfer funds to the grant
         require(ethealToken.transfer(address(tokenGrants[_id]), _amount));
@@ -182,15 +182,13 @@ contract EthealController is Pausable, HasNoTokens, TokenController {
 
         // send eth
         uint256 _stake = this.balance;
-        if (_stake > 0) {
+        if (_stake > 0)
             _controller.transfer(_stake);
-        }
 
         // send tokens
         _stake = ethealToken.balanceOf(this);
-        if (_stake > 0) {
+        if (_stake > 0)
             ethealToken.transfer(_controller, _stake);
-        }
     }
 
     /// @notice Set new multisig wallet, to make it upgradable.
