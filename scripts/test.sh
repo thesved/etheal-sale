@@ -8,8 +8,11 @@ trap cleanup EXIT
 
 cleanup() {
   # Kill the testrpc instance that we started (if we started one and if it's still running).
+  echo "cleanup: $testrpc_pid"
   if [ -n "$testrpc_pid" ] && ps -p $testrpc_pid > /dev/null; then
+    echo "kill!"
     kill -9 $testrpc_pid
+    #kill -9 $(ps aux | grep "[t]estrpc" | awk '{print $2}')
   fi
 }
 
@@ -25,9 +28,9 @@ testrpc_running() {
 
 testrpc() {
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port "$testrpc_port" "$@"
+    node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --gasPrice 0 --port "$testrpc_port" "$@"
   else
-    node_modules/.bin/testrpc "$@"
+    node_modules/.bin/testrpc --gasLimit 0xfffffffffff --gasPrice 0 "$@"
   fi
 }
 
@@ -47,9 +50,12 @@ else
     --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501207,1000000000000000000000000"  \
     --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501208,1000000000000000000000000"  \
     --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501209,1000000000000000000000000"  \
-  > /dev/null &
-  testrpc_pid=`ps -ef | grep testrpc | grep -v grep | awk '{print $2}'`
+  > /dev/null 2> /dev/null & #may want to remove the 2> devnull part if you want to see errors for some reason
+  testrpc_pid=$(($!+2)) #somehow for my mac the eventual pid becomes +2 compared to $!
 fi
+
+echo "truffle start, $testrpc_pid"
+node_modules/.bin/truffle version
 
 if [ "$SOLIDITY_COVERAGE" = true ]; then
   node_modules/.bin/solidity-coverage
