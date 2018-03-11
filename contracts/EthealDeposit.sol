@@ -111,7 +111,7 @@ contract EthealDeposit is Ownable, HasNoTokens {
 
     /// @notice forwarding a transaction
     function forwardTransaction(uint256 _id, bytes _whitelistSign) public whitelistSet saleNotEnded {
-        forwardTransactionInternal(_id, _whitelistSign);
+        require(forwardTransactionInternal(_id, _whitelistSign));
     }
 
     /// @notice forwarding multiple transactions: check whitelist
