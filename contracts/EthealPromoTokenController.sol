@@ -48,13 +48,15 @@ contract EthealPromoTokenController is Pausable, HasNoTokens {
 
         // send eth
         uint256 _stake = this.balance;
-        if (_stake > 0)
+        if (_stake > 0) {
             _controller.transfer(_stake);
+        }
 
         // send tokens
         _stake = ethealPromoToken.balanceOf(this);
-        if (_stake > 0)
+        if (_stake > 0) {
             ethealPromoToken.transfer(_controller, _stake);
+        }
     }
 
     /// @notice set the crowdsale contract: we will set the bonus on this contract
