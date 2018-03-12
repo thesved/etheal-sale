@@ -577,6 +577,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             await this.pcontroller.setPromoToken(purchaser).should.be.fulfilled
         })
 
+        it('shoul failt to set 0 as new PromoToken', async function () {
+            await this.pcontroller.setPromoToken(0).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should not be able to set new PromoToken by other than owner', async function () {
             await this.pcontroller.setPromoToken(purchaser, {from: purchaser}).should.be.rejectedWith(EVMThrow)
         })
@@ -611,6 +615,12 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
         it('should be fail to set by any address than owner or PromoController', async function () {
             await this.crowdsale.setPromoBonus(purchaser,{from:purchaser}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail to transfer when it is paused', async function () {
+            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
+            await this.pcontroller.pause()
+            await this.ptoken.transfer(0x0000000000000000000000000000000000000001,ether(1),{from:purchaser}).should.be.rejectedWith(EVMThrow)
         })
 
         it('should be set bonus by sending to 0x1', async function () {
@@ -1096,15 +1106,15 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         })
 
         // we can't debug this from truffle https://github.com/ethereum/web3.js/issues/1043
-        /*it('should reject zero payments', async function () {
-            await this.crowdsale.buyTokens(investor, "sign").should.be.rejectedWith(EVMThrow)
-            //let _calldata = '0x'+web3.sha3('buyTokens(address,bytes)').slice(2,10)+Array(25).join('0')+investor.slice(2)+Array(63).join('0')+'4055'
-            //await this.crowdsale.sendTransaction({data:_calldata}).should.be.rejectedWith(EVMThrow)
-        })
+        //it('should reject zero payments', async function () {
+        //    await this.crowdsale.buyTokens(investor, "sign").should.be.rejectedWith(EVMThrow)
+        //    //let _calldata = '0x'+web3.sha3('buyTokens(address,bytes)').slice(2,10)+Array(25).join('0')+investor.slice(2)+Array(63).join('0')+'4055'
+        //    //await this.crowdsale.sendTransaction({data:_calldata}).should.be.rejectedWith(EVMThrow)
+        //})
 
-        it('should reject purchase for 0x0 address', async function () {
-            await this.crowdsale.buyTokens(0,"sign", {value: minContribution, from: purchaser}).should.be.rejectedWith(EVMThrow)
-        })*/
+        //it('should reject purchase for 0x0 address', async function () {
+        //    await this.crowdsale.buyTokens(0,"sign", {value: minContribution, from: purchaser}).should.be.rejectedWith(EVMThrow)
+        //})
 
         it('should fail to call depositEth if not deposit address', async function () {
             await this.crowdsale.depositEth(0,0,"sign", {value: minContribution, from: purchaser}).should.be.rejectedWith(EVMThrow)
@@ -1166,7 +1176,6 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         })
 
     })
-
 
 
     describe('low-level purchase', function () {
