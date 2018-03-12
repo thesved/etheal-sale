@@ -438,6 +438,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             _bonus.should.be.bignumber.equal(new BigNumber(100))
         })
 
+        it('should fail setting extra bonus for address 0x0', async function () {
+            await this.crowdsale.setBonusExtra(0,7).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should give individial bonus if set', async function () {
             await this.crowdsale.setBonusExtra(purchaser,7).should.be.fulfilled
             let _bonus = await this.crowdsale.getBonus(purchaser,0,this.startTime+duration.days(30))
@@ -1151,6 +1155,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             await this.crowdsale.depositOffchain(purchaser, ether(1), 0, "sign", {from:purchaser}).should.be.rejectedWith(EVMThrow)
         })
 
+        it('should reject depositOffchain with 0x0 address', async function () {
+            await this.crowdsale.depositOffchain(0, ether(1), 0, "sign").should.be.rejectedWith(EVMThrow)
+        })
+
         it('should depositOffchain', async function () {
             await this.crowdsale.depositOffchain(purchaser, whitelistBelow, 0, "sign").should.be.fulfilled
             let _amount = await this.crowdsale.stakes(purchaser)
@@ -1193,6 +1201,15 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         })
 
         // misc get contributor data
+        it('should give back how much one can contribute', async function () {
+            let _res = await this.crowdsale.howMuchCanIContributeNow()
+            _res.should.be.bignumber.equal(cap)
+        })
+
+        it('should fail when contribution amount is queried for 0x0', async function () {
+            let _res = await this.crowdsale.howMuchCanXContributeNow(0).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should give proper contributor count for zero', async function () {
             let _res = await this.crowdsale.getContributorsCount()
             _res.should.be.bignumber.equal(0)
