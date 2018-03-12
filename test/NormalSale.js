@@ -43,6 +43,7 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
     const bonusMax = 1.4  // 40% max bonus
     const expectedTokenAmount = rate.mul(bonusMax).mul(cap)
+    const maxEtherWithDoubleBonus = expectedTokenAmount.div(2).div(rate)
 
     before(async function() {
         //Advance to the next block to correctly read time in the solidity "now" function interpreted by testrpc
@@ -262,6 +263,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
     describe('whitelist', function () {
         // signer setting
+        it('should fail for 0 initial signer', async function () {
+            await Whitelist.new(0).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should be able to set new signer', async function () {
             await this.whitelist.setSigner(purchaser2).should.be.fulfilled
             let _signer = await this.whitelist.signer()
@@ -292,6 +297,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             await this.whitelist.setWhitelist(purchaser2, false).should.be.fulfilled
             _wl = await this.whitelist.isWhitelisted(purchaser2)
             _wl.should.equal(false)
+        })
+
+        it('should fail to set whitelist to address 0x0', async function () {
+            await this.whitelist.setWhitelist(0, true).should.be.rejectedWith(EVMThrow)
         })
 
         it('should fail to set new whitelist by other than deployer', async function () {
@@ -374,6 +383,21 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         it('should give the biggest bonus before sale', async function () {
             let _bonus = await this.crowdsale.getBonus(0,0,this.startTime-duration.seconds(1))
             _bonus.should.be.bignumber.equal(hourBonuses[0])
+        })
+
+        it('should give the biggest bonus now', async function () {
+            let _bonus = await this.crowdsale.getBonusNow(0,0)
+            _bonus.should.be.bignumber.equal(hourBonuses[0])
+        })
+
+        it('should sale day now 0 before sale', async function () {
+            let _bonus = await this.crowdsale.getSaleDayNow()
+            _bonus.should.be.bignumber.equal(0)
+        })
+
+        it('should sale hour now 0 before sale', async function () {
+            let _bonus = await this.crowdsale.getSaleHourNow()
+            _bonus.should.be.bignumber.equal(0)
         })
 
         hourBonuses.map(function(v,i){
@@ -490,6 +514,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             _balance.should.be.bignumber.equal(0)  // controller should have 0 heal token
         })
 
+        it('should not be able to extract promo token from promo token', async function () {
+            await this.pcontroller.claimTokenTokens(this.ptoken.address).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should not be able to extract token from promo token by other than owner', async function () {
             await this.controller.unpause().should.be.fulfilled
             await this.token.transfer(this.ptoken.address,ether(1)).should.be.fulfilled
@@ -515,10 +543,24 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             await this.pcontroller.setNewController(_controller.address, {from: purchaser}).should.be.rejectedWith(EVMThrow)
         })
 
+        it('should not be able to set zero new controller', async function () {
+            await this.pcontroller.setNewController(0).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should not be able to set new controller when it is already done', async function () {
+            let _controller = await PController.new()
+            await this.pcontroller.setNewController(_controller.address).should.be.fulfilled
+            await this.pcontroller.setNewController(_controller.address).should.be.rejectedWith(EVMThrow)
+        })
+
 
         // set crowdsale
         it('should be able to set new crowdsale', async function () {
             await this.pcontroller.setCrowdsale(purchaser).should.be.fulfilled
+        })
+
+        it('should not be able to set zero as new crowdsale', async function () {
+            await this.pcontroller.setCrowdsale(0).should.be.rejectedWith(EVMThrow)
         })
 
         it('should not be able to set new crowdsale by other than owner', async function () {
@@ -614,6 +656,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
 
         // burn
+        it('should not be able to burn what is not there', async function () {
+            await this.pcontroller.burnToken(purchaser,ether(0.7)).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should be able to burn', async function () {
             await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
             await this.pcontroller.burnToken(purchaser,ether(0.7)).should.be.fulfilled
@@ -654,6 +700,29 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
 
     describe('deposit', function () {
+        // fail cases
+        it('should fail for initiating with 0x0 sale address', async function () {
+            await Deposit.new(0,0).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail deposit without whitelist', async function () {
+            let _depo = await Deposit.new(purchaser,0).should.be.fulfilled
+            await _depo.deposit(purchaser,"test",{value:minContribution}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail deposit after sale end', async function () {
+            await increaseTimeTo(this.afterEndTime)
+            await this.deposit.deposit(purchaser,"test",{value:minContribution}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail deposit for zero address', async function () {
+            await this.deposit.deposit(0,"test",{value:minContribution}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail deposit with zero value', async function () {
+            await this.deposit.deposit(purchaser,"test").should.be.rejectedWith(EVMThrow)
+        })
+
         // set sale
         it('should set new sale address', async function () {
             await this.deposit.setSale(purchaser).should.be.fulfilled
@@ -808,6 +877,20 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             _stake.should.be.bignumber.equal(whitelistAbove.mul(rate).mul(hourBonuses[0]).div(100))
         })
 
+        it('should fail to forward if cleared', async function () {
+            await this.deposit.deposit(purchaser, "", {value:whitelistBelow, from:purchaser}).should.be.fulfilled
+            await this.deposit.forwardTransaction(0,"").should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail to forward non existent transaction', async function () {
+            await this.deposit.forwardTransaction(0,"").should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail to forward transaction without signature', async function () {
+            await this.deposit.deposit(purchaser, "", {value:whitelistAbove, from:purchaser}).should.be.fulfilled
+            await this.deposit.forwardTransaction(0,"").should.be.rejectedWith(EVMThrow)
+        })
+
         it('should get the same bonus for deposit if forwarded later', async function () {
             // deposit
             await this.deposit.deposit(purchaser, "", {value:whitelistAbove}).should.be.fulfilled
@@ -881,6 +964,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
 
         // refund tx
+        it('should fail for non existent transaction', async function () {
+            await this.deposit.refundTransaction(0).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should refund transaction after end', async function () {
             // deposit
             await this.deposit.deposit(purchaser, "", {value:whitelistAbove, from:purchaser}).should.be.fulfilled
@@ -989,13 +1076,34 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
 
 
-
     describe('payments to crowdsale', function () {
-
         it('should reject payments smaller than min contribution', async function () {
-            await increaseTimeTo(this.startTime)
             await this.crowdsale.send(minContribution.minus(1)).should.be.rejectedWith(EVMThrow)
             await this.crowdsale.buyTokens(investor, {value: minContribution.minus(1), from: purchaser}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should reject zero payments', async function () {
+            await this.crowdsale.buyTokens(investor).should.be.rejectedWith(EVMThrow)
+        })
+
+
+        it('should reject payments for 0x0 address', async function () {
+            await this.crowdsale.buyTokens(0,{value: minContribution}).should.be.rejectedWith(EVMThrow)
+        })
+
+        // we can't debug this from truffle https://github.com/ethereum/web3.js/issues/1043
+        /*it('should reject zero payments', async function () {
+            await this.crowdsale.buyTokens(investor, "sign").should.be.rejectedWith(EVMThrow)
+            //let _calldata = '0x'+web3.sha3('buyTokens(address,bytes)').slice(2,10)+Array(25).join('0')+investor.slice(2)+Array(63).join('0')+'4055'
+            //await this.crowdsale.sendTransaction({data:_calldata}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should reject purchase for 0x0 address', async function () {
+            await this.crowdsale.buyTokens(0,"sign", {value: minContribution, from: purchaser}).should.be.rejectedWith(EVMThrow)
+        })*/
+
+        it('should fail to call depositEth if not deposit address', async function () {
+            await this.crowdsale.depositEth(0,0,"sign", {value: minContribution, from: purchaser}).should.be.rejectedWith(EVMThrow)
         })
 
         it('should accept payments before start', async function () {
@@ -1038,7 +1146,19 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             pre.minus(post).should.be.bignumber.equal(cap.minus(lessThanCap))
         })
 
+        // deposit offchain
+        it('should reject depositOffchain other initiated by owner', async function () {
+            await this.crowdsale.depositOffchain(purchaser, ether(1), 0, "sign", {from:purchaser}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should depositOffchain', async function () {
+            await this.crowdsale.depositOffchain(purchaser, whitelistBelow, 0, "sign").should.be.fulfilled
+            let _amount = await this.crowdsale.stakes(purchaser)
+            _amount.should.be.bignumber.equal(whitelistBelow.mul(rate).mul(hourBonuses[0]).div(100))
+        })
+
     })
+
 
 
     describe('low-level purchase', function () {
@@ -1073,6 +1193,18 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         })
 
         // misc get contributor data
+        it('should give proper contributor count for zero', async function () {
+            let _res = await this.crowdsale.getContributorsCount()
+            _res.should.be.bignumber.equal(0)
+        })
+
+        it('should give proper contributor count for two', async function () {
+            await this.crowdsale.buyTokens(investor, {value: minContribution, from: purchaser})
+            await this.crowdsale.buyTokens(purchaser, {value: minContribution, from: purchaser})
+            let _res = await this.crowdsale.getContributorsCount()
+            _res.should.be.bignumber.equal(2)
+        })
+
         it('should list both pending and claimed contributors', async function () {
             await this.crowdsale.buyTokens(investor, {value: minContribution, from: purchaser})
             await this.crowdsale.buyTokens(purchaser, {value: minContribution, from: purchaser})
