@@ -10,7 +10,7 @@ Solidity contract for [etheal](https://etheal.com) token and sale rounds
 4. EthealNormalSale: managing normal sale
 5. EthealDeposit: handling deposit before being whitelisted, and saving date for sending data
 6. EthealWhitelist: handling KYC
-7. EthealPromoTokenController: promo token, which gives additional bonus during sale
+7. EthealPromoToken: promo token, which gives additional bonus during sale
 
 Please see detailed description at the bottom.
 
