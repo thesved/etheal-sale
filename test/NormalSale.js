@@ -17,8 +17,7 @@ const Controller = artifacts.require('EthealController')
 const Token = artifacts.require('EthealToken')
 const Crowdsale = artifacts.require('EthealNormalSale')
 const Hodler = artifacts.require('Hodler')
-const PController = artifacts.require('EthealPromoTokenController')
-const PToken = artifacts.require('EthealPromoToken')
+const PController = artifacts.require('EthealPromoToken')
 const Whitelist = artifacts.require('EthealWhitelist')
 const Deposit = artifacts.require('EthealDeposit')
 const ECRecovery = artifacts.require('ECRecovery')
@@ -64,8 +63,7 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         this.token = await Token.new(this.controller.address, this.factory.address)
         await this.controller.setEthealToken(this.token.address, 0)
         this.hodler = Hodler.at(await this.controller.hodlerReward())
-        this.pcontroller = await PController.new()
-        this.ptoken = await PToken.new(this.pcontroller.address, this.factory.address)
+        this.pcontroller = await PController.new(0)
         this.whitelist = await Whitelist.new(this.signer)
 
         this.crowdsale = await Crowdsale.new(this.controller.address, this.startTime, this.endTime, minContribution, rate, softCap, softCapTime, cap, wallet)
@@ -74,7 +72,6 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         await this.crowdsale.setPromoTokenController(this.pcontroller.address)
         await this.crowdsale.setWhitelist(this.whitelist.address, whitelistThreshold)
         await this.pcontroller.setCrowdsale(this.crowdsale.address)
-        await this.pcontroller.setPromoToken(this.ptoken.address)
 
         this.deposit = await Deposit.new(this.crowdsale.address, this.whitelist.address)
         await this.crowdsale.setDeposit(this.deposit.address)    
@@ -471,6 +468,22 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
 
     
     describe('promo token', function () {
+        // check basics
+        it('should get the name right', async function () {
+            let _name = await this.pcontroller.name()
+            _name.should.equal("An Etheal Promo")
+        })
+
+        it('should get the symbol right', async function () {
+            let _name = await this.pcontroller.symbol()
+            _name.should.equal("HEALP")
+        })
+
+        it('should get the decimals right', async function () {
+            let _name = await this.pcontroller.decimals()
+            _name.should.be.bignumber.equal(0)
+        })
+
         // extract tokens
         it('should not be able to send ether to controller since no payable function', async function () {
             await this.pcontroller.sendTransaction({from:purchaser, value:ether(1)}).should.be.rejectedWith(EVMThrow)
@@ -498,73 +511,14 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             await this.pcontroller.extractTokens(this.token.address, purchaser2, {from:purchaser}).should.be.rejectedWith(EVMThrow)
         })
 
-        it('should not be able to send ether to promo token contract', async function () {
-            await this.ptoken.sendTransaction({from:purchaser, value:ether(1)}).should.be.rejectedWith(EVMThrow)
-        })
-
-        it('should be able to extract token from promo token by owner', async function () {
-            // send 1 HEAL token tok promo token address
-            await this.controller.unpause().should.be.fulfilled
-            await this.token.transfer(this.ptoken.address,ether(1)).should.be.fulfilled
-            let _balance = await this.token.balanceOf(this.ptoken.address)
-            _balance.should.be.bignumber.equal(ether(1));
-
-            // extract it: it forwards to the controller
-            let _before = await this.token.balanceOf(this.pcontroller.address)
-            await this.pcontroller.claimTokenTokens(this.token.address).should.be.fulfilled
-            let _after = await this.token.balanceOf(this.pcontroller.address)
-            _balance = await this.token.balanceOf(this.ptoken.address)
-            _after.minus(_before).should.be.bignumber.equal(ether(1)) // purchaser 2 should gain 1 HEAL token
-            _balance.should.be.bignumber.equal(0)  // controller should have 0 heal token
-        })
-
-        it('should not be able to extract promo token from promo token', async function () {
-            await this.pcontroller.claimTokenTokens(this.ptoken.address).should.be.rejectedWith(EVMThrow)
-        })
-
-        it('should not be able to extract token from promo token by other than owner', async function () {
-            await this.controller.unpause().should.be.fulfilled
-            await this.token.transfer(this.ptoken.address,ether(1)).should.be.fulfilled
-            await this.pcontroller.claimTokenTokens(this.ptoken.address, {from: purchaser}).should.be.rejectedWith(EVMThrow)
-        })
-
-
-        // set new controller
-        it('should be able to set new controller', async function () {
-            let _controller = await PController.new()
-            await this.pcontroller.setNewController(_controller.address).should.be.fulfilled
-            // controller storage set
-            let _new = await this.pcontroller.newController()
-            _new.should.equal(_controller.address)
-
-            // token has new controller
-            _new = await this.ptoken.controller()
-            _new.should.equal(_controller.address)            
-        })
-
-        it('should not be able to set new controller by other than owner', async function () {
-            let _controller = await PController.new()
-            await this.pcontroller.setNewController(_controller.address, {from: purchaser}).should.be.rejectedWith(EVMThrow)
-        })
-
-        it('should not be able to set zero new controller', async function () {
-            await this.pcontroller.setNewController(0).should.be.rejectedWith(EVMThrow)
-        })
-
-        it('should not be able to set new controller when it is already done', async function () {
-            let _controller = await PController.new()
-            await this.pcontroller.setNewController(_controller.address).should.be.fulfilled
-            await this.pcontroller.setNewController(_controller.address).should.be.rejectedWith(EVMThrow)
-        })
-
 
         // set crowdsale
         it('should be able to set new crowdsale', async function () {
             await this.pcontroller.setCrowdsale(purchaser).should.be.fulfilled
         })
 
-        it('should not be able to set zero as new crowdsale', async function () {
-            await this.pcontroller.setCrowdsale(0).should.be.rejectedWith(EVMThrow)
+        it('should be able to set zero as new crowdsale', async function () {
+            await this.pcontroller.setCrowdsale(0).should.be.fulfilled
         })
 
         it('should not be able to set new crowdsale by other than owner', async function () {
@@ -572,144 +526,187 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         })
 
 
-        // set crowdsale
-        it('should be able to set new PromoToken', async function () {
-            await this.pcontroller.setPromoToken(purchaser).should.be.fulfilled
-        })
-
-        it('shoul failt to set 0 as new PromoToken', async function () {
-            await this.pcontroller.setPromoToken(0).should.be.rejectedWith(EVMThrow)
-        })
-
-        it('should not be able to set new PromoToken by other than owner', async function () {
-            await this.pcontroller.setPromoToken(purchaser, {from: purchaser}).should.be.rejectedWith(EVMThrow)
-        })
-
-
         // distribution
-        it('should be able to distribute', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            let _balance = await this.ptoken.balanceOf(purchaser)
-            _balance.should.be.bignumber.equal(ether(1))
+        it('everyone with at least 0.1 ether should have 911 promo token', async function () {
+            let _balance = await this.pcontroller.balanceOf(purchaser)
+            _balance.should.be.bignumber.equal(911)
         })
 
-        it('should be able to distribute to many', async function () {
-            await this.pcontroller.distributeManyToken([purchaser,purchaser2],ether(1)).should.be.fulfilled
-            let _balance = await this.ptoken.balanceOf(purchaser)
-            let _balance2 = await this.ptoken.balanceOf(purchaser2)
-            _balance.should.be.bignumber.equal(ether(1))
-            _balance2.should.be.bignumber.equal(ether(1))
+        it('sending someone 0.1 ether should have 911 promo token', async function () {
+            let _addr = "0x0000000000000000000000000000000000000001"
+            let _balance = await this.pcontroller.balanceOf(_addr)
+            _balance.should.be.bignumber.equal(0)
+            await web3.eth.sendTransaction({value:ether(0.1),to:_addr,from:purchaser})
+
+            _balance = await this.pcontroller.balanceOf(_addr)
+            _balance.should.be.bignumber.equal(911)
+        })
+
+        it('sending someone less than 0.1 ether should have 0 promo token', async function () {
+            let _addr = "0x0000000000000000000000000000000000000002"
+            await web3.eth.sendTransaction({value:ether(0.1).minus(1),to:_addr,from:purchaser})
+            let _balance = await this.pcontroller.balanceOf(_addr)
+            _balance.should.be.bignumber.equal(0)
+        })
+
+        it('addresses with less than 0.1 ether should have 0 promo token', async function () {
+            let _addr = "0x0000000000000000000000000000000000000003"
+            let _balance = await this.pcontroller.balanceOf(_addr)
+            _balance.should.be.bignumber.equal(0)
+        })
+
+        it('should be able to notify and log events', async function () {
+            const {logs} = await this.pcontroller.massNotify([purchaser]).should.be.fulfilled
+            let _balance = await this.pcontroller.balanceOf(purchaser)
+            _balance.should.be.bignumber.equal(911)
+
+            const event = logs.find(e => e.event === 'Transfer')
+            should.exist(event)
+            event.args._from.should.equal('0x0000000000000000000000000000000000000000')
+            event.args._to.should.equal(purchaser)
+            event.args._value.should.be.bignumber.equal(911)
+        })
+
+        it('should be able to notify to many', async function () {
+            const {logs} = await this.pcontroller.massNotify([purchaser,purchaser2]).should.be.fulfilled
+            let _balance = await this.pcontroller.balanceOf(purchaser)
+            _balance.should.be.bignumber.equal(911)
+
+            const event = logs.filter(e => e.event === 'Transfer')
+            should.exist(event)
+            event.length.should.equal(2)
+            event[0].args._from.should.equal('0x0000000000000000000000000000000000000000')
+            event[0].args._to.should.equal(purchaser)
+            event[0].args._value.should.be.bignumber.equal(911)
+            event[1].args._from.should.equal('0x0000000000000000000000000000000000000000')
+            event[1].args._to.should.equal(purchaser2)
+            event[1].args._value.should.be.bignumber.equal(911)
         })
 
         it('should not be able to distribute by other than owner', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1),{from:purchaser}).should.be.rejectedWith(EVMThrow)
+            await this.pcontroller.massNotify([purchaser],{from:purchaser}).should.be.rejectedWith(EVMThrow)
         })
 
 
         // bonus
-        it('should be set bonus by owner', async function () {
-            await this.crowdsale.setPromoBonus(purchaser).should.be.fulfilled
+        it('should be fail to set promo bonus by any address than owner or PromoController', async function () {
+            await this.crowdsale.setPromoBonus(purchaser,10,{from:purchaser}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should be fail to set pormo bonus with 0 value', async function () {
+            await this.crowdsale.setPromoBonus(purchaser,0).should.be.rejectedWith(EVMThrow)
+        })
+
+
+        it('should fail to set promo bonus if crowdsale is 0', async function () {
+            await this.pcontroller.setCrowdsale(0).should.be.fulfilled
+            await this.pcontroller.transfer(0x0000000000000000000000000000000000000001,1,{from:purchaser}).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(0)
+        })
+
+        it('should fail to set promo bonus if value is 0', async function () {
+            await this.pcontroller.transfer(0x0000000000000000000000000000000000000001,0,{from:purchaser}).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(0)
+        })
+
+        it('should fail to set promo bonus for unsuccessful transfer', async function () {
+            await this.pcontroller.transfer(0x0000000000000000000000000000000000000001,1000,{from:purchaser}).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(0)
+        })
+
+        it('should fail to set promo bonus for transferFrom with 0 value', async function () {
+            await this.pcontroller.approve(purchaser2,10,{from:purchaser})
+            await this.pcontroller.transferFrom(purchaser,0x0000000000000000000000000000000000000001,0,{from:purchaser2}).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(0)
+        })
+
+        it('should set promo bonus for transferFrom', async function () {
+            await this.pcontroller.approve(purchaser2,10,{from:purchaser})
+            await this.pcontroller.transferFrom(purchaser,0x0000000000000000000000000000000000000001,5,{from:purchaser2}).should.be.fulfilled
             let _bonus = await this.crowdsale.bonusExtra(purchaser)
             _bonus.should.be.bignumber.equal(5)
         })
 
-        it('should be fail to set by any address than owner or PromoController', async function () {
-            await this.crowdsale.setPromoBonus(purchaser,{from:purchaser}).should.be.rejectedWith(EVMThrow)
+        it('should fail to set promo bonus for transferFrom which is too high', async function () {
+            await this.pcontroller.setCrowdsale(0).should.be.fulfilled
+            await this.pcontroller.approve(purchaser2,10,{from:purchaser})
+            await this.pcontroller.transferFrom(purchaser,0x0000000000000000000000000000000000000001,11,{from:purchaser2}).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(0)
         })
 
-        it('should fail to transfer when it is paused', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.pcontroller.pause()
-            await this.ptoken.transfer(0x0000000000000000000000000000000000000001,ether(1),{from:purchaser}).should.be.rejectedWith(EVMThrow)
-        })
-
-        it('should be set bonus by sending to 0x1', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.ptoken.transfer(0x0000000000000000000000000000000000000001,ether(1),{from:purchaser}).should.be.fulfilled
+        it('should set promo bonus by owner', async function () {
+            await this.crowdsale.setPromoBonus(purchaser,10).should.be.fulfilled
             let _bonus = await this.crowdsale.bonusExtra(purchaser)
             _bonus.should.be.bignumber.equal(5)
         })
 
-        it('should be set bonus by sending to PromoController', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.ptoken.transfer(this.pcontroller.address,ether(1),{from:purchaser}).should.be.fulfilled
+        it('should set easter egg promo bonus by owner', async function () {
+            await this.crowdsale.setPromoBonus(purchaser,42).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(6)
+        })
+
+        it('should set bonus by sending to 0x1', async function () {
+            await this.pcontroller.transfer(0x0000000000000000000000000000000000000001,1,{from:purchaser}).should.be.fulfilled
             let _bonus = await this.crowdsale.bonusExtra(purchaser)
             _bonus.should.be.bignumber.equal(5)
         })
 
-        it('should be set bonus by sending to Crowdsale', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.ptoken.transfer(this.crowdsale.address,ether(1),{from:purchaser}).should.be.fulfilled
+        it('should set bonus by sending to PromoToken', async function () {
+            await this.pcontroller.transfer(this.pcontroller.address,1,{from:purchaser}).should.be.fulfilled
             let _bonus = await this.crowdsale.bonusExtra(purchaser)
             _bonus.should.be.bignumber.equal(5)
         })
 
-        it('should be set bonus only once even though sent twice', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.ptoken.transfer(this.crowdsale.address,ether(0.2),{from:purchaser}).should.be.fulfilled
-            await this.ptoken.transfer(this.crowdsale.address,ether(0.2),{from:purchaser}).should.be.fulfilled
+        it('should set bonus by sending to Crowdsale', async function () {
+            await this.pcontroller.transfer(this.crowdsale.address,1,{from:purchaser}).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(5)
+        })
+
+        it('should not set bonus by sending to other address than 0x0, PromoToken or Crowdsale', async function () {
+            await this.pcontroller.transfer(2,1,{from:purchaser}).should.be.fulfilled
+            let _bonus = await this.crowdsale.bonusExtra(purchaser)
+            _bonus.should.be.bignumber.equal(0)
+        })
+
+        it('should set bonus only once even though sent twice', async function () {
+            await this.pcontroller.transfer(this.crowdsale.address,1,{from:purchaser}).should.be.fulfilled
+            await this.pcontroller.transfer(this.crowdsale.address,1,{from:purchaser}).should.be.fulfilled
             let _bonus = await this.crowdsale.bonusExtra(purchaser)
             _bonus.should.be.bignumber.equal(5)
         })
 
         it('should override smaller extra bonus', async function () {
             await this.crowdsale.setBonusExtra(purchaser,2).should.be.fulfilled
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.ptoken.transfer(this.crowdsale.address,ether(0.2),{from:purchaser}).should.be.fulfilled
+            await this.pcontroller.transfer(this.crowdsale.address,1,{from:purchaser}).should.be.fulfilled
             let _bonus = await this.crowdsale.bonusExtra(purchaser)
             _bonus.should.be.bignumber.equal(5)
         })
 
         it('should not override larger extra bonus', async function () {
             await this.crowdsale.setBonusExtra(purchaser,7).should.be.fulfilled
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.ptoken.transfer(this.crowdsale.address,ether(0.2),{from:purchaser}).should.be.fulfilled
+            await this.pcontroller.transfer(this.crowdsale.address,1,{from:purchaser}).should.be.fulfilled
             let _bonus = await this.crowdsale.bonusExtra(purchaser)
             _bonus.should.be.bignumber.equal(7)
         })
 
 
-        // burn
-        it('should not be able to burn what is not there', async function () {
-            await this.pcontroller.burnToken(purchaser,ether(0.7)).should.be.rejectedWith(EVMThrow)
+        // kill
+        it('should be able to kill', async function () {
+            await this.pcontroller.kill().should.be.fulfilled
         })
 
-        it('should be able to burn', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.pcontroller.burnToken(purchaser,ether(0.7)).should.be.fulfilled
-            let _balance = await this.ptoken.balanceOf(purchaser)
-            _balance.should.be.bignumber.equal(ether(0.3))
+        it('should fail to kill by other than the owner', async function () {
+            await this.pcontroller.kill({from:purchaser2}).should.be.rejectedWith(EVMThrow)
         })
 
-        it('should be able to burn at many addresses', async function () {
-            await this.pcontroller.distributeManyToken([purchaser,purchaser2],ether(1)).should.be.fulfilled
-            await this.pcontroller.burnManyToken([purchaser,purchaser2],ether(0.7)).should.be.fulfilled
-            let _balance = await this.ptoken.balanceOf(purchaser)
-            let _balance2 = await this.ptoken.balanceOf(purchaser2)
-            _balance.should.be.bignumber.equal(ether(0.3))
-            _balance2.should.be.bignumber.equal(ether(0.3))
-        })
-
-        it('should not be able to burn by other than owner', async function () {
-            await this.pcontroller.distributeToken(purchaser,ether(1)).should.be.fulfilled
-            await this.pcontroller.burnToken(purchaser,ether(0.7),{from:purchaser}).should.be.rejectedWith(EVMThrow)
-        })
-
-
-
-        // onapprove
-        it('should approve if not paused', async function () {
-            await this.ptoken.approve(purchaser,0).should.be.fulfilled
-        })
-
-        it('should disapprove if paused', async function () {
-            await this.pcontroller.pause().should.be.fulfilled
-            await this.ptoken.approve(purchaser,0).should.be.rejectedWith(EVMThrow)
-        })
-
-        it('should not be paused by other than owner', async function () {
-            await this.pcontroller.pause({from: purchaser}).should.be.rejectedWith(EVMThrow)
-        })
+        
     })
 
 
@@ -980,6 +977,10 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         // refund tx
         it('should fail for non existent transaction', async function () {
             await this.deposit.refundTransaction(0).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should fail for non existent transaction', async function () {
+            await this.deposit.refundManyTransaction([0,2]).should.be.rejectedWith(EVMThrow)
         })
 
         it('should refund transaction after end', async function () {
