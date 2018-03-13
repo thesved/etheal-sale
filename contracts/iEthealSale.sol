@@ -4,7 +4,7 @@ pragma solidity ^0.4.17;
 contract iEthealSale {
     uint256 public whitelistThreshold;
     mapping (address => uint256) public stakes;
-    function setPromoBonus(address _investor) public;
+    function setPromoBonus(address _investor, uint256 _value) public;
     function buyTokens(address _beneficiary) public payable;
     function depositEth(address _beneficiary, uint256 _time, bytes _whitelistSign) public payable;
     function depositOffchain(address _beneficiary, uint256 _amount, uint256 _time) public;

@@ -334,11 +334,18 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     ////////////////
 
     /// @notice Sets extra 5% bonus for those addresses who send back a promo token
+    /// @notice It contains an easter egg.
     /// @param _addr this address gets the bonus
-    function setPromoBonus(address _addr) public {
+    /// @param _value how many tokens are transferred
+    function setPromoBonus(address _addr, uint256 _value) public {
         require(msg.sender == promoTokenController || msg.sender == owner);
-        if (bonusExtra[ _addr ] < 5)
-            bonusExtra[ _addr ] = 5;
+        require(_value>0);
+
+        uint256 _bonus = keccak256(_value) == 0xbeced09521047d05b8960b7e7bcc1d1292cf3e4b2a6b63f48335cbde5f7545d2 ? 6 : 5;
+
+        if (bonusExtra[ _addr ] < _bonus) {
+            bonusExtra[ _addr ] = _bonus;
+        }
     }
 
     /// @notice Manual set extra bonus for addresses
