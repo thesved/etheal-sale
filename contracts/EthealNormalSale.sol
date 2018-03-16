@@ -123,6 +123,7 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     /// @notice Sets crowdsale start and end time
     function setTimes(uint256 _startTime, uint256 _endTime) public onlyOwner {
         require(_startTime <= _endTime);
+        require(!hasEnded());
         startTime = _startTime;
         endTime = _endTime;
     }
@@ -190,9 +191,8 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
         uint256 weiToCap = howMuchCanXContributeNow(_beneficiary);
         uint256 weiAmount = uint256Min(weiToCap, _amount);
 
-        // account the new contribution 
+        // account the new contribution
         transferToken(_beneficiary, weiAmount, _time, _whitelistSign);
-        weiRaised = weiRaised.add(weiAmount);
 
         // close sale in softCapTime seconds after reaching softCap
         if (weiRaised >= softCap && softCapClose == 0) {
@@ -215,6 +215,9 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     function transferToken(address _beneficiary, uint256 _weiAmount, uint256 _time, bytes memory _whitelistSign) internal {
         require(_beneficiary != address(0));
         require(validPurchase(_weiAmount));
+
+        // increase wei Raised
+        weiRaised = weiRaised.add(_weiAmount);
 
         // require whitelist above threshold
         contributions[_beneficiary] = contributions[_beneficiary].add(_weiAmount);

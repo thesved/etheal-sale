@@ -95,6 +95,7 @@ contract EthealDeposit is Ownable, HasNoTokens {
     function deposit(address _investor, bytes _whitelistSign) public payable whitelistSet saleNotEnded returns (uint256) {
         require(_investor != address(0));
         require(msg.value > 0);
+        require(msg.value >= sale.minContribution());
 
         uint256 transactionId = addTransaction(_investor, msg.value);
 
