@@ -10,7 +10,6 @@ var Hodler = artifacts.require("Hodler");
 var TokenVesting = artifacts.require("TokenVesting");
 var EthealDeposit = artifacts.require("EthealDeposit");
 var EthealWhitelist = artifacts.require("EthealWhitelist");
-var EthealPromoTokenController = artifacts.require("EthealPromoTokenController");
 var EthealPromoToken = artifacts.require("EthealPromoToken");
 var ECRecovery = artifacts.require("ECRecovery");
 var ED,EN,EW;
@@ -24,7 +23,7 @@ module.exports = function(deployer) {
 		return deployer.deploy(SafeMath);
 	}).then(function(){
 		// link SafeMath
-		return deployer.link(SafeMath, [PreSale, NormalSale, RefundVault, EthealController, Hodler, TokenVesting, EthealDeposit, EthealWhitelist, EthealPromoTokenController]);
+		return deployer.link(SafeMath, [PreSale, NormalSale, EthealController, Hodler, TokenVesting, EthealDeposit, EthealWhitelist, EthealPromoToken]);
 	}).then(function(){
 		// deploy SafeMath first
 		return deployer.deploy(ECRecovery);
@@ -47,11 +46,8 @@ module.exports = function(deployer) {
 		// set Token for Crowdsale
 		return (EthealController.at(EthealController.address)).setEthealToken(EthealToken.address,0);
 	}).then(function(){
-		// promo controller
-		return deployer.deploy(EthealPromoTokenController);
-	}).then(function(){
 		// promo token
-		return deployer.deploy(EthealPromoToken,EthealPromoTokenController.address,MiniMeTokenFactory.address);
+		return deployer.deploy(EthealPromoToken,0);
 	}).then(function(){
 		// whitelist
 		return deployer.deploy(EthealWhitelist,web3.eth.accounts[4]);
@@ -63,16 +59,13 @@ module.exports = function(deployer) {
 		return (EthealController.at(EthealController.address)).setCrowdsaleTransfer(NormalSale.address,web3.toBigNumber(web3.toWei(50,"ether")).mul(1000));
 	}).then(function(){
 		// set promo token
-		return (NormalSale.at(NormalSale.address)).setPromoTokenController(EthealPromoTokenController.address);
+		return (NormalSale.at(NormalSale.address)).setPromoTokenController(EthealPromoToken.address);
 	}).then(function(){
 		// set whitelist
 		return (NormalSale.at(NormalSale.address)).setWhitelist(EthealWhitelist.address, web3.toWei(1, "ether"));
 	}).then(function(){
 		// promo controller set sale addr
-		return (EthealPromoTokenController.at(EthealPromoTokenController.address)).setCrowdsale(NormalSale.address);
-	}).then(function(){
-		// promo controller set promo token
-		return (EthealPromoTokenController.at(EthealPromoTokenController.address)).setPromoToken(EthealPromoToken.address);
+		return (EthealPromoToken.at(EthealPromoToken.address)).setCrowdsale(NormalSale.address);
 	}).then(function(){
 		// etheal deposit
 		return deployer.deploy(EthealDeposit,NormalSale.address,EthealWhitelist.address);
