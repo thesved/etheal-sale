@@ -137,6 +137,11 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             await this.crowdsale.setTimes(this.startTime, this.endTime).should.be.fulfilled
         })
 
+        it('should fail to set times after end time', async function () {
+            await increaseTimeTo(this.afterEndTime)
+            await this.crowdsale.setTimes(this.startTime, this.endTime).should.be.rejectedWith(EVMThrow)
+        })
+
         it('should fail to set invalid times', async function () {
             await this.crowdsale.setTimes(this.endTime+duration.seconds(1), this.endTime).should.be.rejectedWith(EVMThrow);
         })
@@ -250,7 +255,8 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         it('should be ended after cap reached', async function () {
             await increaseTimeTo(this.startTime)
             await this.whitelist.setWhitelist(deployer,true).should.be.fulfilled
-            await this.crowdsale.send(cap).should.be.fulfilled
+            //await web3.eth.sendTransaction({to:this.crowdsale.address, from:deployer, value:cap})
+            await this.crowdsale.sendTransaction({value:cap}).should.be.fulfilled
             let ended = await this.crowdsale.hasEnded()
             ended.should.equal(true)
         })
@@ -734,6 +740,18 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             await this.deposit.deposit(purchaser,"test").should.be.rejectedWith(EVMThrow)
         })
 
+        it('should fail deposit below min contribution', async function () {
+            await this.deposit.deposit(purchaser,"test",{value:minContribution.minus(1)}).should.be.rejectedWith(EVMThrow)
+        })
+
+        it('should succeed with min contribution', async function () {
+            await this.deposit.deposit(purchaser,"test",{value:minContribution}).should.be.fulfilled
+        })
+
+        it('should be able to deposit at min contribution', async function () {
+            await this.deposit.deposit(purchaser,"test",{value:minContribution}).should.be.fulfilled
+        })
+
         // set sale
         it('should set new sale address', async function () {
             await this.deposit.setSale(purchaser).should.be.fulfilled
@@ -937,6 +955,26 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             _stake.should.be.bignumber.equal(whitelistAbove.mul(2).mul(rate).mul(hourBonuses[0]).div(100))
         })
 
+        it('should not forward not whitelisted transactions when forwarding many transactions', async function () {
+            // deposit
+            await this.deposit.deposit(purchaser, "", {value:whitelistAbove, from:purchaser}).should.be.fulfilled
+            await this.deposit.deposit(purchaser2, "", {value:whitelistAbove, from:purchaser2}).should.be.fulfilled
+
+            // whitelist
+            await this.whitelist.setWhitelist(purchaser,true).should.be.fulfilled
+            await this.deposit.forwardManyTransaction([0,1]).should.be.fulfilled
+
+            // checks
+            let _amount = await this.deposit.transactions(0)
+            let _amount2 = await this.deposit.transactions(1)
+            _amount[3].should.equal(true)
+            _amount2[3].should.equal(false)
+            let _stake = await this.crowdsale.stakes(purchaser)
+            let _stake2 = await this.crowdsale.stakes(purchaser2)
+            _stake.should.be.bignumber.equal(whitelistAbove.mul(rate).mul(hourBonuses[0]).div(100))
+            _stake2.should.be.bignumber.equal(0)
+        })
+
         it('should forward investor transactions if whitelisted', async function () {
             // deposit
             await this.deposit.deposit(purchaser, "", {value:whitelistAbove, from:purchaser}).should.be.fulfilled
@@ -953,6 +991,37 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             _amount2[3].should.equal(true)
             let _stake = await this.crowdsale.stakes(purchaser)
             _stake.should.be.bignumber.equal(whitelistAbove.mul(2).mul(rate).mul(hourBonuses[0]).div(100))
+        })
+
+        it('should forward investor transactions only below threshold if not whitelisted', async function () {
+            // deposit
+            await this.deposit.deposit(purchaser, "", {value:whitelistBelow, from:purchaser}).should.be.fulfilled
+            await this.deposit.deposit(purchaser, "", {value:whitelistAbove, from:purchaser}).should.be.fulfilled
+
+            // forward
+            await this.deposit.forwardInvestorTransaction(purchaser, "").should.be.fulfilled
+
+            // checks
+            let _amount = await this.deposit.transactions(0)
+            let _amount2 = await this.deposit.transactions(1)
+            _amount[3].should.equal(true)
+            _amount2[3].should.equal(false)
+            let _stake = await this.crowdsale.stakes(purchaser)
+            _stake.should.be.bignumber.equal(whitelistBelow.mul(rate).mul(hourBonuses[0]).div(100))
+        })
+
+        it('should not forward investor transactions if not whitelisted', async function () {
+            // deposit
+            await this.deposit.deposit(purchaser, "", {value:whitelistAbove, from:purchaser}).should.be.fulfilled
+
+            // forward
+            await this.deposit.forwardInvestorTransaction(purchaser, "").should.be.fulfilled
+
+            // checks
+            let _amount = await this.deposit.transactions(0)
+            _amount[3].should.equal(false)
+            let _stake = await this.crowdsale.stakes(purchaser)
+            _stake.should.be.bignumber.equal(0)
         })
 
         it('should forward investor transactions if offchain signed', async function () {
@@ -1090,7 +1159,6 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
     })
 
 
-
     describe('payments to crowdsale', function () {
         it('should reject payments smaller than min contribution', async function () {
             await this.crowdsale.send(minContribution.minus(1)).should.be.rejectedWith(EVMThrow)
@@ -1191,6 +1259,26 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             event.args._beneficiary.should.equal(investor)
             event.args._value.should.be.bignumber.equal(minContribution)
             event.args._amount.should.be.bignumber.equal(minContribution.mul(rate).mul(hourBonuses[0]).div(100))
+            event.args._participants.should.be.bignumber.equal(1)
+            event.args._weiRaised.should.be.bignumber.equal(minContribution)
+        })
+
+        it('should log multiple purchases', async function () {
+            // first contrib
+            await this.crowdsale.sendTransaction({value: minContribution, from: investor})
+             
+            // second contrib
+            let {logs} = await this.crowdsale.sendTransaction({value: minContribution, from: purchaser})
+
+            let event = logs.find(e => e.event === 'TokenPurchase')
+
+            should.exist(event)
+            event.args._purchaser.should.equal(investor)
+            event.args._beneficiary.should.equal(investor)
+            event.args._value.should.be.bignumber.equal(minContribution)
+            event.args._amount.should.be.bignumber.equal(minContribution.mul(rate).mul(hourBonuses[0]).div(100))
+            event.args._participants.should.be.bignumber.equal(2)
+            event.args._weiRaised.should.be.bignumber.equal(minContribution.mul(2))
         })
 
     })
@@ -1733,5 +1821,5 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         })
 
     })
-
+//*/
 })
