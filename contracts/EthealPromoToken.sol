@@ -99,8 +99,7 @@ contract EthealPromoToken is HasNoTokens, AbstractVirtualToken {
 
     /// @notice Notify owners about their virtual balances.
     function massNotify(address[] _owners) public onlyOwner {
-        uint256 count = _owners.length;
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < _owners.length; i++) {
             Transfer(address(0), _owners[i], VIRTUAL_COUNT);
         }
     }
