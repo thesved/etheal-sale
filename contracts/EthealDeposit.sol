@@ -30,9 +30,9 @@ contract EthealDeposit is Ownable, HasNoTokens {
     iEthealSale public sale;
     EthealWhitelist public whitelist;
 
-    event Deposited(address indexed beneficiary, uint256 weiAmount);
-    event Refunded(address indexed beneficiary, uint256 weiAmount, uint256 id);
-    event Forwarded(address indexed beneficiary, uint256 weiAmount, uint256 id);
+    event LogDeposited(address indexed beneficiary, uint256 weiAmount, uint256 id);
+    event LogRefunded(address indexed beneficiary, uint256 weiAmount, uint256 id);
+    event LogForwarded(address indexed beneficiary, uint256 weiAmount, uint256 id);
 
     ////////////////
     // Constructor
@@ -79,6 +79,11 @@ contract EthealDeposit is Ownable, HasNoTokens {
         _;
     }
 
+    modifier saleNotPaused() {
+        require(address(sale) != address(0) && !sale.paused());
+        _;
+    }
+
     modifier saleEnded() {
         require(address(sale) != address(0) && sale.hasEnded());
         _;
@@ -104,19 +109,22 @@ contract EthealDeposit is Ownable, HasNoTokens {
             || whitelist.isOffchainWhitelisted(_investor, _whitelistSign) 
             || sale.whitelistThreshold() >= sale.stakes(_investor).add(msg.value)
         ) {
-            forwardTransactionInternal(transactionId, _whitelistSign);
+            // only forward if sale is not paused
+            if (!sale.paused()) {
+                forwardTransactionInternal(transactionId, _whitelistSign);
+            }
         }
 
         return transactionId;
     }
 
     /// @notice forwarding a transaction
-    function forwardTransaction(uint256 _id, bytes _whitelistSign) public whitelistSet saleNotEnded {
+    function forwardTransaction(uint256 _id, bytes _whitelistSign) public whitelistSet saleNotEnded saleNotPaused {
         require(forwardTransactionInternal(_id, _whitelistSign));
     }
 
     /// @notice forwarding multiple transactions: check whitelist
-    function forwardManyTransaction(uint256[] _ids) public whitelistSet saleNotEnded {
+    function forwardManyTransaction(uint256[] _ids) public whitelistSet saleNotEnded saleNotPaused {
         uint256 _threshold = sale.whitelistThreshold();
 
         for (uint256 i=0; i<_ids.length; i++) {
@@ -130,7 +138,7 @@ contract EthealDeposit is Ownable, HasNoTokens {
     }
 
     /// @notice forwarding transactions for an investor
-    function forwardInvestorTransaction(address _investor, bytes _whitelistSign) public whitelistSet saleNotEnded {
+    function forwardInvestorTransaction(address _investor, bytes _whitelistSign) public whitelistSet saleNotEnded saleNotPaused {
         bool _whitelisted = whitelist.isWhitelisted(_investor) || whitelist.isOffchainWhitelisted(_investor, _whitelistSign);
         uint256 _amount = sale.stakes(_investor);
         uint256 _threshold = sale.whitelistThreshold();
@@ -185,7 +193,7 @@ contract EthealDeposit is Ownable, HasNoTokens {
 
         transactionCount = transactionCount.add(1);
         pendingCount = pendingCount.add(1);
-        Deposited(_investor,_amount);
+        LogDeposited(_investor, _amount, transactionId);
 
         return transactionId;
     }
@@ -210,7 +218,7 @@ contract EthealDeposit is Ownable, HasNoTokens {
         transactions[_id].cleared = true;
 
         pendingCount = pendingCount.sub(1);
-        Forwarded(transactions[_id].beneficiary, transactions[_id].amount, _id);
+        LogForwarded(transactions[_id].beneficiary, transactions[_id].amount, _id);
 
         return true;
     }
@@ -245,7 +253,7 @@ contract EthealDeposit is Ownable, HasNoTokens {
         transactions[_id].beneficiary.transfer(transactions[_id].amount);
 
         pendingCount = pendingCount.sub(1);
-        Refunded(transactions[_id].beneficiary, transactions[_id].amount, _id);
+        LogRefunded(transactions[_id].beneficiary, transactions[_id].amount, _id);
 
         return true;
     }
