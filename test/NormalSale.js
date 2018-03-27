@@ -1252,7 +1252,7 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         it('should log purchase', async function () {
             const {logs} = await this.crowdsale.sendTransaction({value: minContribution, from: investor})
 
-            const event = logs.find(e => e.event === 'TokenPurchase')
+            const event = logs.find(e => e.event === 'LogTokenPurchase')
 
             should.exist(event)
             event.args._purchaser.should.equal(investor)
@@ -1270,11 +1270,11 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
             // second contrib
             let {logs} = await this.crowdsale.sendTransaction({value: minContribution, from: purchaser})
 
-            let event = logs.find(e => e.event === 'TokenPurchase')
+            let event = logs.find(e => e.event === 'LogTokenPurchase')
 
             should.exist(event)
-            event.args._purchaser.should.equal(investor)
-            event.args._beneficiary.should.equal(investor)
+            event.args._purchaser.should.equal(purchaser)
+            event.args._beneficiary.should.equal(purchaser)
             event.args._value.should.be.bignumber.equal(minContribution)
             event.args._amount.should.be.bignumber.equal(minContribution.mul(rate).mul(hourBonuses[0]).div(100))
             event.args._participants.should.be.bignumber.equal(2)
@@ -1289,7 +1289,7 @@ contract('NormalSale', function ([deployer, investor, wallet, purchaser, purchas
         it('should log purchase', async function () {
             const {logs} = await this.crowdsale.buyTokens(investor, {value: minContribution, from: purchaser})
 
-            const event = logs.find(e => e.event === 'TokenPurchase')
+            const event = logs.find(e => e.event === 'LogTokenPurchase')
 
             should.exist(event)
             event.args._purchaser.should.equal(purchaser)
