@@ -53,10 +53,10 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
     address[] public contributorsKeys; 
 
     // events for token purchase during sale and claiming tokens after sale
-    event TokenClaimed(address indexed _claimer, address indexed _beneficiary, uint256 _amount);
-    event TokenPurchase(address indexed _purchaser, address indexed _beneficiary, uint256 _value, uint256 _amount, uint256 _participants, uint256 _weiRaised);
-    event TokenSoftCapReached(uint256 _closeTime);
-    event TokenHardCapReached();
+    event LogTokenClaimed(address indexed _claimer, address indexed _beneficiary, uint256 _amount);
+    event LogTokenPurchase(address indexed _purchaser, address indexed _beneficiary, uint256 _value, uint256 _amount, uint256 _participants, uint256 _weiRaised);
+    event LogTokenSoftCapReached(uint256 _closeTime);
+    event LogTokenHardCapReached();
 
     ////////////////
     // Constructor and inherited function overrides
@@ -197,12 +197,12 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
         // close sale in softCapTime seconds after reaching softCap
         if (weiRaised >= softCap && softCapClose == 0) {
             softCapClose = now.add(softCapTime);
-            TokenSoftCapReached(uint256Min(softCapClose, endTime));
+            LogTokenSoftCapReached(uint256Min(softCapClose, endTime));
         }
 
         // event for hard cap reached
         if (weiRaised >= cap) {
-            TokenHardCapReached();
+            LogTokenHardCapReached();
         }
 
         return weiAmount;
@@ -236,7 +236,7 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
         }
         stakes[_beneficiary] = stakes[_beneficiary].add(tokens);
 
-        TokenPurchase(msg.sender, _beneficiary, _weiAmount, tokens, contributorsKeys.length, weiRaised);
+        LogTokenPurchase(msg.sender, _beneficiary, _weiAmount, tokens, contributorsKeys.length, weiRaised);
     }
 
     /// @dev Get eth deposit from Deposit contract
@@ -319,7 +319,7 @@ contract EthealNormalSale is Pausable, FinalizableCrowdsale, CappedCrowdsale {
 
         // distribute token
         require(ethealController.ethealToken().transfer(_beneficiary, tokens));
-        TokenClaimed(msg.sender, _beneficiary, tokens);
+        LogTokenClaimed(msg.sender, _beneficiary, tokens);
     }
 
     /// @notice claimToken() for multiple addresses
