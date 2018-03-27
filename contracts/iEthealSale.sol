@@ -2,6 +2,7 @@ pragma solidity ^0.4.17;
 
 /// @dev Crowdsale interface for Etheal Normal Sale, functions needed from outside.
 contract iEthealSale {
+    bool public paused;
     uint256 public minContribution;
     uint256 public whitelistThreshold;
     mapping (address => uint256) public stakes;
