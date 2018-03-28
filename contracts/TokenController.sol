@@ -8,7 +8,7 @@ contract TokenController {
     address public SALE; // address where sale tokens are located
 
     /// @notice needed for hodler handling
-    function addHodlerStake(address _beneficiary, uint _stake) public;
+    function addHodlerStake(address _beneficiary, uint256 _stake) public;
     function setHodlerStake(address _beneficiary, uint256 _stake) public;
     function setHodlerTime(uint256 _time) public;
 
