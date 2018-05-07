@@ -18,6 +18,8 @@ contract EthealPromoToken is HasNoTokens, AbstractVirtualToken {
     // crowdsale to set bonus when sending token
     iEthealSale public crowdsale;
 
+    // logging promo token activation
+    event LogBonusSet(address indexed _address, uint256 _amount);
 
     ////////////////
     // Basic functions
@@ -67,6 +69,7 @@ contract EthealPromoToken is HasNoTokens, AbstractVirtualToken {
 
         if (_to == address(1) || _to == address(this) || _to == address(crowdsale)) {
             crowdsale.setPromoBonus(_from, _value);
+            LogBonusSet(_from, _value);
         }
     }
 
