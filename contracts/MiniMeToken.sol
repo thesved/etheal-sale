@@ -29,7 +29,7 @@ contract MiniMeToken is Controlled {
     /// @dev `Checkpoint` is the structure that attaches a block number to a
     ///  given value, the block number attached is the one that last changed the
     ///  value
-    struct Checkpoint {
+    struct  Checkpoint {
 
         // `fromBlock` is the block number that the value was generated from
         uint128 fromBlock;
@@ -113,7 +113,8 @@ contract MiniMeToken is Controlled {
     /// @return Whether the transfer was successful or not
     function transfer(address _to, uint256 _amount) public returns (bool success) {
         require(transfersEnabled);
-        return doTransfer(msg.sender, _to, _amount);
+        doTransfer(msg.sender, _to, _amount);
+        return true;
     }
 
     /// @notice Send `_amount` tokens to `_to` from `_from` on the condition it
@@ -133,10 +134,11 @@ contract MiniMeToken is Controlled {
             require(transfersEnabled);
 
             // The standard ERC 20 transferFrom functionality
-            if (allowed[_from][msg.sender] < _amount) return false;
+            require(allowed[_from][msg.sender] >= _amount);
             allowed[_from][msg.sender] -= _amount;
         }
-        return doTransfer(_from, _to, _amount);
+        doTransfer(_from, _to, _amount);
+        return true;
     }
 
     /// @dev This is the actual transfer function in the token contract, it can
@@ -146,10 +148,11 @@ contract MiniMeToken is Controlled {
     /// @param _amount The amount of tokens to be transferred
     /// @return True if the transfer was successful
     function doTransfer(address _from, address _to, uint _amount
-    ) internal returns(bool) {
+    ) internal {
 
            if (_amount == 0) {
-               return true;
+               Transfer(_from, _to, _amount);    // Follow the spec to louch the event when transfer 0
+               return;
            }
 
            require(parentSnapShotBlock < block.number);
@@ -157,17 +160,16 @@ contract MiniMeToken is Controlled {
            // Do not allow transfer to 0x0 or the token contract itself
            require((_to != 0) && (_to != address(this)));
 
-           // If the amount being transfered is more than the balance of the
-           //  account the transfer returns false
-           var previousBalanceFrom = balanceOfAt(_from, block.number);
-           if (previousBalanceFrom < _amount) {
-               return false;
-           }
-
            // Alerts the token controller of the transfer
            if (isContract(controller)) {
                require(TokenController(controller).onTransfer(_from, _to, _amount));
            }
+
+           // If the amount being transfered is more than the balance of the
+           //  account the transfer throws
+           var previousBalanceFrom = balanceOfAt(_from, block.number);
+
+           require(previousBalanceFrom >= _amount);
 
            // First update the balance array with the new value for the address
            //  sending the tokens
@@ -182,7 +184,6 @@ contract MiniMeToken is Controlled {
            // An event to make the transfer easy to find on the blockchain
            Transfer(_from, _to, _amount);
 
-           return true;
     }
 
     /// @param _owner The address that's balance is being requested
@@ -329,7 +330,7 @@ contract MiniMeToken is Controlled {
         string _cloneTokenSymbol,
         uint _snapshotBlock,
         bool _transfersEnabled
-    ) public returns(address) {
+        ) public returns(address) {
         if (_snapshotBlock == 0) _snapshotBlock = block.number;
         MiniMeToken cloneToken = tokenFactory.createCloneToken(
             this,
@@ -494,7 +495,11 @@ contract MiniMeToken is Controlled {
     event ClaimedTokens(address indexed _token, address indexed _controller, uint _amount);
     event Transfer(address indexed _from, address indexed _to, uint256 _amount);
     event NewCloneToken(address indexed _cloneToken, uint _snapshotBlock);
-    event Approval(address indexed _owner, address indexed _spender, uint256 _amount);
+    event Approval(
+        address indexed _owner,
+        address indexed _spender,
+        uint256 _amount
+        );
 
 }
 
